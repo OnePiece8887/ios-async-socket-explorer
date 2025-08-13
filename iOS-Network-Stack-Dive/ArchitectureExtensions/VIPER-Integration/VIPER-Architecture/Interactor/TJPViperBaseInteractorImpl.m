@@ -37,7 +37,7 @@
     self = [super init];
     if (self) {
         // 缓存组件
-        _cacheManager = [[TJPCacheManager alloc] initWithCacheStrategy:[[TJPMemoryCache alloc] init]];
+        _cacheManager = [[TJPCacheManager alloc] initWithCacheStrategy:[[TJPMemoryCache alloc] init] defaultStrategy:TJPCacheStrategyStaleWhileRevalidate];
 
         // 错误处理组件
         _errorHandler = [TJPViperDefaultErrorHandler sharedHandler];
@@ -100,6 +100,11 @@
                                failure:(void (^)(NSError * _Nullable))failure {
     
     TJPLOG_INFO(@"[%@] 开始请求第 %ld 页数据（带分页信息）", NSStringFromClass([self class]), (long)page);
+    
+    // 第一页请求时重置分页状态
+    if (page == 1) {
+        [self resetPagination];
+    }
 
     // 参数验证
     if (page <= 0) {
@@ -119,11 +124,11 @@
         return;
     }
     
-    // 检查缓存
+    // 检查数据缓存
     NSString *cacheKey = [self cacheKeyForPage:page];
-    NSString *paginationCacheKey = [self paginationCacheKeyForPage:page];
     
     NSArray *cachedData = [self.cacheManager loadCacheForKey:cacheKey];
+    // 检查分页信息缓存
     TJPPaginationInfo *cachedPagination = [self loadCachedPaginationForPage:page];
     
     if (cachedData && cachedPagination) {
@@ -157,6 +162,7 @@
 
             // 缓存数据和分页信息
             if ([self shouldCacheDataForPage:page] && data.count > 0) {
+                TJPLOG_INFO(@"准备缓存数据:%@", data);
                 [self.cacheManager saveCacheWithData:data forKey:cacheKey expireTime:TJPCacheExpireTimeMedium];
                 if (pagination) {
                     [self cachePaginationInfo:pagination forPage:page];
@@ -275,8 +281,39 @@
 }
 
 #pragma mark - Manage Cache
+- (NSString *)cacheKeyForPage:(NSInteger)page {
+    // 数据key包含更多上下文信息
+    NSString *userId = [self getCurrentUserId] ?: @"AaronTang";
+    NSString *apiVersion = [self getAPIVersion] ?: @"v1";
+    
+    return [NSString stringWithFormat:@"%@_%@_%@_page_%ld", NSStringFromClass([self class]), userId, apiVersion, (long)page];
+}
+
 - (NSString *)paginationCacheKeyForPage:(NSInteger)page {
-    return [NSString stringWithFormat:@"%@_pagination_page_%ld", NSStringFromClass([self class]), (long)page];
+    // 分页信息key
+    return [NSString stringWithFormat:@"%@_pagination", [self cacheKeyForPage:page]];
+}
+
+
+- (NSString *)getCurrentUserId {
+    //
+    return @"mock_user_id_10086";
+}
+
+- (NSString *)getAPIVersion {
+    return @"v1";
+}
+
+- (NSString *)cacheKeyWithParams:(NSDictionary *)params {
+    NSMutableString *key = [NSMutableString stringWithFormat:@"%@", NSStringFromClass([self class])];
+    
+    // 按键排序确保一致性
+    NSArray *sortedKeys = [[params allKeys] sortedArrayUsingSelector:@selector(compare:)];
+    for (NSString *paramKey in sortedKeys) {
+        [key appendFormat:@"_%@_%@", paramKey, params[paramKey]];
+    }
+    
+    return [key copy];
 }
 
 - (void)cachePaginationInfo:(TJPPaginationInfo *)pagination forPage:(NSInteger)page {
@@ -506,9 +543,6 @@
 
 #pragma mark - Utility Methods
 
-- (NSString *)cacheKeyForPage:(NSInteger)page {
-    return [NSString stringWithFormat:@"%@_page_%ld", NSStringFromClass([self class]), (long)page];
-}
 
 - (BOOL)shouldCacheDataForPage:(NSInteger)page {
     return page <= 10; // 默认对前10页进行缓存
@@ -557,26 +591,46 @@
 }
 
 - (BOOL)canLoadNextPage {
-    NSLog(@"[DEBUG] canLoadNextPage: hasMoreData=%@, currentPage=%ld", _hasMoreData ? @"YES" : @"NO", (long)self.currentPage);
-    return _hasMoreData && _currentPagination.canLoadNextPage;
+    if (!_hasMoreData) return NO;
+    
+    if (_currentPagination) {
+        return _currentPagination.canLoadNextPage;
+    }
+    
+    // 如果没有分页信息但有更多数据，允许加载
+    return YES;
 }
 
 - (NSInteger)getNextPageNumber {
-    NSInteger nextPage;
     if (!_currentPagination) {
-        nextPage = 1;
-    } else if (_currentPagination.paginationType == TJPPaginationTypePageBased) {
-        nextPage = _currentPagination.getNextPageNumber;
-    } else {
-        nextPage = _currentPage + 1;
+        return _currentPage + 1;
     }
     
-    NSLog(@"[DEBUG] getNextPageNumber: currentPage=%ld, nextPage=%ld", (long)_currentPage, (long)nextPage);
-    NSLog(@"[DEBUG] 调用栈: %@", [NSThread callStackSymbols]);
-    
-    return nextPage;
+    if (_currentPagination.paginationType == TJPPaginationTypePageBased) {
+        return _currentPagination.getNextPageNumber;
+    } else {
+        return _currentPage + 1;
+    }
 }
 
+- (NSInteger)getCurrentPage {
+    return _currentPage;
+}
+
+- (NSInteger)getTotalPage {
+    if (!_currentPagination) return 0;
+    
+    if (_currentPagination.paginationType == TJPPaginationTypePageBased) {
+        return _currentPagination.totalPages;
+    } else {
+        // 游标分页无总页数概念
+        return NSIntegerMax;
+    }
+}
+
+- (BOOL)hasMoreData {
+    return _hasMoreData;
+}
 
 #pragma mark - Private Methods
 
@@ -603,6 +657,7 @@
                                code:errorCode
                            userInfo:@{NSLocalizedDescriptionKey: description ?: @"未知错误"}];
 }
+
 
 
 @end

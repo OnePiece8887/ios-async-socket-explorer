@@ -135,6 +135,48 @@
 }
 
 
+#pragma mark - Refresh
+- (NSInteger)getCurrentPage {
+    if (!self.baseInteractor) {
+        TJPLOG_ERROR(@"baseInteractor为空，无法获取当前页码");
+        return 0;
+    }
+    return [self.baseInteractor getCurrentPage];
+}
+
+- (NSInteger)getTotalPage {
+    if (!self.baseInteractor) {
+        TJPLOG_ERROR(@"baseInteractor为空，无法获取总页数");
+        return 0;
+    }
+    return [self.baseInteractor getTotalPage];
+}
+
+- (BOOL)hasMoreData {
+    if (!self.baseInteractor) {
+        TJPLOG_ERROR(@"baseInteractor为空，无法判断是否有更多数据");
+        return NO;
+    }
+    return [self.baseInteractor hasMoreData];
+}
+
+- (BOOL)canLoadNextPage {
+    if (!self.baseInteractor) {
+        TJPLOG_ERROR(@"baseInteractor为空，无法判断是否可以加载下一页");
+        return NO;
+    }
+    return [self.baseInteractor canLoadNextPage];
+}
+
+- (NSInteger)getNextPageNumber {
+    if (!self.baseInteractor) {
+        TJPLOG_ERROR(@"baseInteractor为空，无法获取下一页页码");
+        return 1;
+    }
+    return [self.baseInteractor getNextPageNumber];
+}
+
+
 #pragma mark - Load Data
 - (void)fetchInteractorDataForPage:(NSInteger)page success:(void (^)(NSArray * _Nonnull, NSInteger))success failure:(void (^)(NSError * _Nonnull))failure {
     // 向后兼容的方法
@@ -376,7 +418,7 @@
 }
 
 - (BOOL)validateResponseData:(NSArray *)data {
-    if (!data || ![data isKindOfClass:[NSArray class]]) {
+    if (!data) {
         return NO;
     }
     return YES; // 子类可重写进行更详细的验证

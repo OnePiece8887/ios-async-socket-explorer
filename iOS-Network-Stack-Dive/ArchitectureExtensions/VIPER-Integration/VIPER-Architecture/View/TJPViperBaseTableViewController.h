@@ -47,11 +47,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// 重复请求管理
 @property (nonatomic, assign) BOOL shouldPreventDuplicateRequests;
 
-// 分页信息
-@property (nonatomic, assign, readonly) NSInteger currentPage;
-@property (nonatomic, assign, readonly) NSInteger totalPage;
-
-
 // 子类可重写的方法
 - (void)setupTableViewStyle;
 - (void)configureInitialState;

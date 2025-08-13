@@ -144,6 +144,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)resetPagination;
 - (BOOL)canLoadNextPage;
 - (NSInteger)getNextPageNumber;
+- (NSInteger)getCurrentPage;
+- (NSInteger)getTotalPage;
+- (BOOL)hasMoreData;
+
 
 @optional
 

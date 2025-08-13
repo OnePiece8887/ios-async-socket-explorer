@@ -39,6 +39,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @param sections 装载Section模型的数据  cell模型的数组cellModels为sections中的属性
  */
 - (void)reloadDataWithSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections;
+
 //- (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels;
 
 /**
@@ -47,10 +48,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @param animation 刷新时的动画效果
  */
 - (void)tableReloadRowsWithIndexPaths:(NSArray<NSIndexPath *> *)indexPaths animation:(UITableViewRowAnimation)animation;
-
-
-/// 刷新所有数据（支持 Diff 策略）
-- (void)reloadDataWithSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections;
 
 /// 刷新某个 section
 - (void)reloadSection:(NSInteger)section withAnimation:(UITableViewRowAnimation)animation;
@@ -64,7 +61,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)endRefreshing;
 /// 没有更多数据
 - (void)noMoreData;
-
+/// 重置没有更多数据
+- (void)resetNoMoreData;
 
 
 /// 空白样式 允许重写

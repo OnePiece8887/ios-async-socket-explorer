@@ -11,17 +11,20 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol TJPCacheProtocol <NSObject>
 
-// 存储数据
+// 基础缓存操作
 - (void)saveCacheWithData:(id)data forKey:(NSString *)key expireTime:(NSTimeInterval)expireTime;
-
-// 读取数据
 - (id)loadCacheForKey:(NSString *)key;
-
-// 删除缓存
 - (void)removeCacheForKey:(NSString *)key;
-
-// 清除所有缓存
 - (void)clearAllCache;
+
+// 缓存数据查询
+- (BOOL)hasCacheForKey:(NSString *)key;
+- (NSTimeInterval)remainingTimeForKey:(NSString *)key;
+- (NSUInteger)cacheSize;
+
+// 批量操作
+- (void)removeCacheWithKeyPrefix:(NSString *)keyPrefix;
+- (NSArray<NSString *> *)allCacheKeys;
 
 @end
 

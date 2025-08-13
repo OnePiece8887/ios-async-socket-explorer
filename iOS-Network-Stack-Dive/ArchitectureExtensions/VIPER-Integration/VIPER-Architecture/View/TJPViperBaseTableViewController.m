@@ -24,10 +24,7 @@
 
 
 // 数据管理
-@property (nonatomic, assign) NSInteger currentPage;
-@property (nonatomic, assign) NSInteger totalPage;
 @property (nonatomic, strong) NSMutableArray *dataArray;
-@property (nonatomic, assign) NSInteger requestingPage;
 
 // 请求管理
 @property (nonatomic, strong) NSMutableSet<NSNumber *> *activeRequests;
@@ -106,10 +103,6 @@
     _stateMachine = [[TJPViewControllerStateMachine alloc] initWithInitialState:TJPViewControllerStateIdle];
     _stateMachine.delegate = self;
 
-    // 初始化为0，表示还没有加载任何页面
-    _currentPage = 0;
-    _totalPage = 1;
-    _requestingPage = 0;
     _dataArray = [NSMutableArray array];
     _activeRequests = [NSMutableSet set];
     
@@ -296,18 +289,19 @@
 }
 
 - (void)loadMoreData {
-    if (self.currentPage >= self.totalPage) {
+    // 通过Presenter查询分页状态
+    if (![self.basePresenter canLoadNextPage]) {
         [self.tableView endRefreshing];
         [self.tableView noMoreData];
         return;
     }
     
-    [self loadDataForPage:self.currentPage + 1];
+    // 让Presenter决定加载哪一页
+    NSInteger nextPage = [self.basePresenter getNextPageNumber];
+    [self loadDataForPage:nextPage];
 }
 
 - (void)fetchDataForPage:(NSInteger)page {
-    // 记录当前请求的页码
-    self.requestingPage = page;
     NSDate *startTime = [NSDate date];
     NSNumber *pageKey = @(page);
     
@@ -341,19 +335,13 @@
 - (void)handleDataFetchSuccess:(NSArray *)data totalPage:(NSInteger)totalPage forPage:(NSInteger)requestPage {
     // 重置数据的条件：第一页或刷新状态
     if (requestPage == 1 || self.currentState == TJPViewControllerStateRefreshing) {
-        // 第一页或刷新，替换数据源
         [self.dataArray removeAllObjects];
-        self.currentPage = 0;  // 重置为0
-        TJPLOG_DEBUG(@"[TJPViperBaseTableViewController] 重置数据，currentPage设置为0");
+        TJPLOG_DEBUG(@"重置数据");
     }
     
     if (data.count > 0) {
         [self.dataArray addObjectsFromArray:data];
-        self.currentPage = requestPage;
-        TJPLOG_DEBUG(@"[TJPViperBaseTableViewController] 数据添加完成，currentPage更新为: %ld", (long)self.currentPage);
     }
-    
-    self.totalPage = totalPage;
     
     // 更新状态
     if (self.dataArray.count == 0) {
@@ -362,13 +350,24 @@
         [self.stateMachine transitionToState:TJPViewControllerStateContent];
     }
     
-    // 结束刷新
     [self.tableView endRefreshing];
 }
 
-- (void)handleDataFetchSuccess:(NSArray *)data totalPage:(NSInteger)totalPage {
-    [self handleDataFetchSuccess:data totalPage:totalPage forPage:self.requestingPage];
+- (void)updatePaginationUI {
+    BOOL hasMore = [self.basePresenter hasMoreData];
+    NSInteger currentPage = [self.basePresenter getCurrentPage];
+    
+    if (!hasMore) {
+        [self.tableView noMoreData];
+        TJPLOG_INFO(@"已加载全部数据，当前页: %ld", (long)currentPage);
+    } else {
+        [self.tableView resetNoMoreData];
+    }
 }
+
+//- (void)handleDataFetchSuccess:(NSArray *)data totalPage:(NSInteger)totalPage {
+//    [self handleDataFetchSuccess:data totalPage:totalPage forPage:self.requestingPage];
+//}
 
 - (void)handleDataFetchError:(NSError *)error forPage:(NSInteger)page {
     @weakify(self)

@@ -193,6 +193,23 @@
 
     if (sections.count == 1 && [sections.firstObject conformsToProtocol:@protocol(TJPBaseSectionModelProtocol)]) {
         id<TJPBaseSectionModelProtocol> section = sections.firstObject;
+        
+        
+        // 🔧 添加详细验证
+                TJPLOG_ERROR(@"=== 单 Section 验证 ===");
+                TJPLOG_ERROR(@"Section 类型: %@", NSStringFromClass([section class]));
+                TJPLOG_ERROR(@"cellModels 类型: %@", NSStringFromClass([section.cellModels class]));
+                TJPLOG_ERROR(@"cellModels 数量: %lu", (unsigned long)section.cellModels.count);
+                
+                if (section.cellModels.count > 0) {
+                    id firstCell = section.cellModels[0];
+                    TJPLOG_ERROR(@"第一个 CellModel: %@ - %@",
+                                NSStringFromClass([firstCell class]), firstCell);
+                }
+        
+        
+        
+        
         // 如果是单 Section 且符合协议，复用已有 Diff 刷新逻辑
         [self reloadDataWithCellModels:section.cellModels];
         return;
@@ -287,6 +304,11 @@
 - (void)endRefreshing {
     [self.mj_header endRefreshing];
     [self.mj_footer endRefreshing];
+}
+
+
+- (void)resetNoMoreData {
+    [self.mj_footer resetNoMoreData];
 }
 
 - (void)noMoreData {
