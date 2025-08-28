@@ -27,9 +27,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// Section 模型数组，每个 Section 包含 cellModels
 @property (nonatomic, strong) NSArray<id<TJPBaseSectionModelProtocol>> *sectionModels;
 
-/// 存储 CellModel 数据
-@property (nonatomic, strong) NSMutableArray<id<TJPBaseCellModelProtocol>> *cellModels;
-
 
 /// 动画对象（默认提供旋转动画）
 @property (nonatomic, strong) id<TJPBaseTableViewLoadingProtocol> loadingAnimation;
@@ -40,7 +37,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)reloadDataWithSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections;
 
-//- (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels;
+/**
+ * 刷新TableView数据 - 单section模式（兼容性方法）
+ * @param cellModels cell模型数组，内部会自动包装为单个section
+ */
+- (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels;
 
 /**
  * 局部刷新TableView数据
