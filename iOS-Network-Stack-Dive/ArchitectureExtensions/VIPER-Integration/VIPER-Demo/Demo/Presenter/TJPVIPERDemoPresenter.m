@@ -27,7 +27,6 @@
     }
     
     // 处理其他本模块关心的CellModel类型
-    // 例如：如果这个Presenter也需要处理新闻Cell
     if ([cellModel isKindOfClass:NSClassFromString(@"TJPNewsCellModel")]) {
         return [self buildNewsNavigationModel:cellModel];
     }

@@ -51,10 +51,11 @@
         return detailVC;
     }
     
-    // 新闻详情页（假设通过DI创建）
+    // 通过DI创建的新闻详情页
     if ([routeId isEqualToString:@"newsDetail"]) {
-        // 这里可能需要注入新闻模块的Provider
-        return [self.viperModuleProvider viperDemoViewController]; // 示例用同一个VC
+        // 获取Title
+        NSString *title = [parameters objectForKey:@"title"];
+        return [self.viperModuleProvider viperNewsDetailViewControllerWithTitle:title];
     }
     
     return nil;
