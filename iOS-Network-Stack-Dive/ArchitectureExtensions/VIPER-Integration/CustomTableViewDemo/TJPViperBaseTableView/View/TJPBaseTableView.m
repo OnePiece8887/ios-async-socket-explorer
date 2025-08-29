@@ -17,6 +17,7 @@
 #import "MJRefresh.h"
 #import "UIColor+TJPColor.h"
 #import "TJPNetworkDefine.h"
+#import "TJPBaseSectionModel.h"
 
 
 
@@ -36,7 +37,8 @@
 //
 //    Private Interface
 @interface TJPBaseTableView () <UITableViewDelegate, UITableViewDataSource, DZNEmptyDataSetSource, DZNEmptyDataSetDelegate>
-// section数据
+
+/// 内部数据源 - 统一的section数据  所有数据都使用它
 @property (nonatomic, strong) NSArray<id<TJPBaseSectionModelProtocol>> *internalSections;
 
 // 使用一个集合来存储已注册的单元格标识符，避免重复注册
@@ -61,7 +63,6 @@
 - (void)commonInit {
     self.delegate = self;
     self.dataSource = self;
-    self.cellModels = [NSMutableArray array];
     self.internalSections = [NSMutableArray array];
     self.registeredIdentifiers = [NSMutableSet set];
     self.emptyDataSetSource = self;
@@ -88,7 +89,6 @@
     TJPLogDealloc();
     
     // 确保数据源被释放
-    self.cellModels = nil;
     self.internalSections = nil;
     // 释放注册的 cell 标识符
     self.registeredIdentifiers = nil;
@@ -107,45 +107,16 @@
 #pragma mark Private Methods
 //**************************************************
 //    Private Methods
-- (void)setCellModels:(NSMutableArray<id<TJPBaseCellModelProtocol>> *)cellModels {
-    if (_cellModels != cellModels) {
-        _cellModels = cellModels;
-        
-        [self registerCells];
-    }
-}
-
 - (void)setSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sectionModels {
     if (_internalSections != sectionModels) {
-        _internalSections = sectionModels;
+        _internalSections = sectionModels ?: @[];
+
         [self registerCellsForSections:sectionModels];
     }
 }
 
-- (void)registerCells {
-    for (id<TJPBaseCellModelProtocol> model in self.cellModels) {
-        NSString *cellName = [model cellName];
-        Class cellClass = NSClassFromString(cellName);
-        NSString *cellIdentifier = NSStringFromClass(cellClass);
-        
-        //如果该类型已经注册过则跳过注册
-        if ([self.registeredIdentifiers containsObject:cellIdentifier]) {
-            continue;
-        }
-        
-        
-        NSBundle *bundle = [NSBundle bundleForClass:cellClass];
-        if ([bundle pathForResource:cellIdentifier ofType:@"nib"] != nil) {
-            // 如果有 nib 文件，注册 nib
-            [self registerNib:[UINib nibWithNibName:cellIdentifier bundle:bundle] forCellReuseIdentifier:cellIdentifier];
-            TJPLOG_INFO(@"Registered nib for cell: %@", cellIdentifier);
-        } else {
-            // 如果没有 nib 文件，注册 class
-            [self registerClass:cellClass forCellReuseIdentifier:cellIdentifier];
-            TJPLOG_INFO(@"Registered class for cell: %@", cellIdentifier);
-        }
-        [self.registeredIdentifiers addObject:cellIdentifier];
-    }
+- (NSArray<id<TJPBaseSectionModelProtocol>> *)sectionModels {
+    return self.internalSections;
 }
 
 - (void)registerCellsForSections:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections {
@@ -189,60 +160,24 @@
         TJPLOG_WARN(@"[TJPBaseTableView] sectionModels 为空，请检查!!当前sectionModels已赋值为@[]");
         sections = @[];
     }
-    self.internalSections = sections;
+    
+    // 赋值数据并注册cell
+    [self setSectionModels:sections];
 
-    if (sections.count == 1 && [sections.firstObject conformsToProtocol:@protocol(TJPBaseSectionModelProtocol)]) {
-        id<TJPBaseSectionModelProtocol> section = sections.firstObject;
-        // 如果是单 Section 且符合协议，复用已有 Diff 刷新逻辑
-        [self reloadDataWithCellModels:section.cellModels];
-        return;
-    }
-
-    // 多 section 情况：暂时使用全量刷新（未来可支持 diff）
-    TJPLOG_INFO(@"[TJPBaseTableView] 全量刷新，section 数量: %lu", (unsigned long)sections.count);
     [self reloadData];
+    
+    // TODO 增加差异化局部刷新机制
 }
 
 
 - (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels {
-    if ([self.cellModels isEqualToArray:cellModels]) {
-        return;
-    }
+    // 兼容性方法：将cellModels包装为单个section
+    TJPBaseSectionModel *defaultSection = [[TJPBaseSectionModel alloc] initWithCellModels:cellModels ?: @[]];
     
-    // 此处使用拷贝快照防止线程问题
-    NSArray *oldModels = [self.cellModels copy];  // 拷贝为不可变数组，线程安全
-
-    // 异步进行数据处理
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSMutableArray<NSIndexPath *> *indexPathsToReload = [NSMutableArray array];
-        
-        // 判断需要更新的行数
-        for (NSInteger i = 0; i < MIN(oldModels.count, cellModels.count); i++) {
-            id<TJPBaseCellModelProtocol> oldModel = oldModels[i];
-            id<TJPBaseCellModelProtocol> newModel = cellModels[i];
-            
-            if (![oldModel isEqual:newModel]) {
-                [indexPathsToReload addObject:[NSIndexPath indexPathForRow:i inSection:0]];
-            }
-        }
-
-        // 根据更新的行数判断是否使用全量更新还是局部更新
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.cellModels = [cellModels mutableCopy];
-            // 如果是第一次加载数据或没有有效的 indexPathsToReload，进行全量刷新
-                if (indexPathsToReload.count > 5 || indexPathsToReload.count == 0) {
-                    TJPLOG_INFO(@"执行全量刷新，cell 数量: %lu", (unsigned long)cellModels.count);
-                    [self reloadData]; // 全量刷新
-                } else {
-                    // 如果是局部刷新，确保 indexPathsToReload 是有效的
-                    TJPLOG_INFO(@"执行局部更新，更新的行数: %lu", (unsigned long)indexPathsToReload.count);
-                    [self beginUpdates];
-                    [self reloadRowsAtIndexPaths:indexPathsToReload withRowAnimation:UITableViewRowAnimationAutomatic]; // 局部刷新
-                    [self endUpdates];
-                }
-        });
-    });
+    // 转发到统一的section方法
+    [self reloadDataWithSectionModels:@[defaultSection]];
 }
+
 
 - (void)reloadSection:(NSInteger)section withAnimation:(UITableViewRowAnimation)animation {
     if (section < self.internalSections.count) {
@@ -287,6 +222,15 @@
 - (void)endRefreshing {
     [self.mj_header endRefreshing];
     [self.mj_footer endRefreshing];
+}
+
+
+- (void)resetNoMoreData {
+    [self.mj_footer resetNoMoreData];
+}
+
+- (void)noMoreData {
+    [self.mj_footer endRefreshingWithNoMoreData];
 }
 
 //**************************************************

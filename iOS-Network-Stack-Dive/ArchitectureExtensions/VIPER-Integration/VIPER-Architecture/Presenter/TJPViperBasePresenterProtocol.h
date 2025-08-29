@@ -43,6 +43,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 
+#pragma mark - 分页状态
+- (NSInteger)getCurrentPage;
+- (NSInteger)getTotalPage;
+- (BOOL)hasMoreData;
+- (BOOL)canLoadNextPage;
+- (NSInteger)getNextPageNumber;
+
 #pragma mark - 生命周期管理
 
 /**

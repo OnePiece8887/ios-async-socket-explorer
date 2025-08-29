@@ -21,6 +21,7 @@
 #import "TJPVIPERDemoViewController.h"
 #import "TJPVIPERDemoInteractorImpl.h"
 #import "TJPVIPERDemoDetailViewController.h"
+#import "TJPNewsDetailTableViewController.h"
 
 
 @interface TJPViperModuleAssembly () <TJPViperModuleProvider>
@@ -86,6 +87,14 @@
     return [TyphoonDefinition withClass:[TJPVIPERDemoDetailViewController class] configuration:^(TyphoonDefinition *definition) {
     }];
     
+}
+
+
+
+- (UIViewController *)viperNewsDetailViewControllerWithTitle:(id)title {
+    return [TyphoonDefinition withClass:[TJPNewsDetailTableViewController class] configuration:^(TyphoonDefinition *definition) {
+        [definition injectProperty:@selector(titleStr) with:title];
+    }];
 }
 
 @end

@@ -27,9 +27,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// Section 模型数组，每个 Section 包含 cellModels
 @property (nonatomic, strong) NSArray<id<TJPBaseSectionModelProtocol>> *sectionModels;
 
-/// 存储 CellModel 数据
-@property (nonatomic, strong) NSMutableArray<id<TJPBaseCellModelProtocol>> *cellModels;
-
 
 /// 动画对象（默认提供旋转动画）
 @property (nonatomic, strong) id<TJPBaseTableViewLoadingProtocol> loadingAnimation;
@@ -39,7 +36,12 @@ NS_ASSUME_NONNULL_BEGIN
  * @param sections 装载Section模型的数据  cell模型的数组cellModels为sections中的属性
  */
 - (void)reloadDataWithSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections;
-//- (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels;
+
+/**
+ * 刷新TableView数据 - 单section模式（兼容性方法）
+ * @param cellModels cell模型数组，内部会自动包装为单个section
+ */
+- (void)reloadDataWithCellModels:(NSArray<id<TJPBaseCellModelProtocol>> *)cellModels;
 
 /**
  * 局部刷新TableView数据
@@ -47,10 +49,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @param animation 刷新时的动画效果
  */
 - (void)tableReloadRowsWithIndexPaths:(NSArray<NSIndexPath *> *)indexPaths animation:(UITableViewRowAnimation)animation;
-
-
-/// 刷新所有数据（支持 Diff 策略）
-- (void)reloadDataWithSectionModels:(NSArray<id<TJPBaseSectionModelProtocol>> *)sections;
 
 /// 刷新某个 section
 - (void)reloadSection:(NSInteger)section withAnimation:(UITableViewRowAnimation)animation;
@@ -62,6 +60,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)configurePullUpRefreshControlWithTarget:(id)target pullUpAction:(SEL)pullUpAction;
 /// 结束刷新
 - (void)endRefreshing;
+/// 没有更多数据
+- (void)noMoreData;
+/// 重置没有更多数据
+- (void)resetNoMoreData;
 
 
 /// 空白样式 允许重写

@@ -11,6 +11,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class TJPPaginationInfo;
+
+
 @protocol TJPViperBaseInteractorProtocol <NSObject>
 
 #pragma mark - 响应式信号
@@ -30,6 +33,9 @@ NS_ASSUME_NONNULL_BEGIN
  * @param failure 失败回调
  */
 - (void)fetchDataForPageWithCompletion:(NSInteger)page success:(void (^)(NSArray * _Nullable data, NSInteger totalPage))success failure:(void (^)(NSError * _Nullable error))failure;
+
+// 带分页信息的数据加载（推荐使用）
+- (void)fetchDataForPageWithPagination:(NSInteger)page success:(void (^)(NSArray * _Nullable data, TJPPaginationInfo * _Nullable pagination))success failure:(void (^)(NSError * _Nullable error))failure;
 
 
 #pragma mark - 数据操作
@@ -132,6 +138,15 @@ NS_ASSUME_NONNULL_BEGIN
  * @return 验证错误，nil表示验证通过
  */
 - (NSError * _Nullable)validateBusinessRules:(NSDictionary *)data;
+
+
+#pragma mark - 分页管理
+- (void)resetPagination;
+- (BOOL)canLoadNextPage;
+- (NSInteger)getNextPageNumber;
+- (NSInteger)getCurrentPage;
+- (NSInteger)getTotalPage;
+- (BOOL)hasMoreData;
 
 
 @optional
